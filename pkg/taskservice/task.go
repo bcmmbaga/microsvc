@@ -5,6 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -15,7 +22,15 @@ import (
 
 // taskService implements taskpb.TaskServiceServer
 type taskService struct {
-	client *mongo.Client
+	coll *mongo.Collection
+}
+
+// Task todo task
+type Task struct {
+	ID       primitive.ObjectID `bson:"_id, omitempty"`
+	Title    string             `bson:"title"`
+	Desc     string             `bson:"desc"`
+	Reminder time.Time          `bson:"remainder"`
 }
 
 // NewTaskService create a new service for task management
@@ -26,7 +41,7 @@ func NewTaskService(ctx context.Context, hosts ...string) taskpb.TaskServiceServ
 		return nil
 	}
 
-	return &taskService{client: c}
+	return &taskService{coll: c.Database("todosdb").Collection("todos")}
 }
 
 // dbHost joins multiple host names into single address for connection
@@ -44,7 +59,31 @@ func dbHost(port int, hosts ...string) string {
 
 // Create creates new todo task
 func (s *taskService) Create(ctx context.Context, req *taskpb.CreateRequest) (*taskpb.CreateResponse, error) {
-	return new(taskpb.CreateResponse), http.ErrHandlerTimeout
+
+	remainder, err := ptypes.Timestamp(req.GetRemainder())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "reminder has unknown field"+err.Error())
+	}
+
+	task := Task{
+		Title:    req.GetTitle(),
+		Desc:     req.GetDesc(),
+		Reminder: remainder,
+	}
+
+	res, err := s.coll.InsertOne(ctx, task)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%s", err.Error())
+	}
+
+	objID, ok := res.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "Failed to retrieve taskId from db: "+err.Error())
+	}
+
+	return &taskpb.CreateResponse{
+		Id: objID.Hex(),
+	}, nil
 }
 
 // Read todo task
