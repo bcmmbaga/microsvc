@@ -9,7 +9,7 @@ import "google/protobuf/empty.proto";
 // Task describe todo task
 message Task {
   // Unique task identifier
-  int64 id = 1;
+  string id = 1;
   // title of the task
   string title = 2;
   // details description of the task
@@ -18,30 +18,25 @@ message Task {
   google.protobuf.Timestamp reminder = 4;
 }
 
-// Status describe status of performed action
-message Status {
-  int64 code = 1;
-  string message = 2;
-}
-
 message CreateRequest {
   string title = 1;
   string desc = 2;
+  google.protobuf.Timestamp remainder = 3;
 }
 
-message CreateResponse { int64 id = 1; }
+message CreateResponse { string id = 1; }
 
-message ReadRequest { int64 id = 1; }
+message ReadRequest { string id = 1; }
 
 message ReadResponse { Task task = 1; }
 
 message UpdateRequest { Task task = 1; }
 
-message UpdateResponse { Status status = 1; }
+message UpdateResponse { string id = 1; }
 
 message DeleteRequest { int64 id = 1; }
 
-message DeleteResponse { Status status = 1; }
+message DeleteResponse { string id = 1; }
 
 message ReadAllResponse { repeated Task task = 1; }
 
