@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -88,12 +90,59 @@ func (s *taskService) Create(ctx context.Context, req *taskpb.CreateRequest) (*t
 
 // Read todo task
 func (s *taskService) Read(ctx context.Context, req *taskpb.ReadRequest) (*taskpb.ReadResponse, error) {
-	return new(taskpb.ReadResponse), http.ErrHandlerTimeout
+	objID, err := primitive.ObjectIDFromHex(req.GetId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%s"+err.Error())
+	}
+
+	res := &Task{}
+	err = s.coll.FindOne(ctx, bson.D{{Key: "_id", Value: objID}}).Decode(&res)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%s"+err.Error())
+	}
+
+	remainder, err := ptypes.TimestampProto(res.Reminder)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Failed to convert time.time to timestamp"+err.Error())
+	}
+
+	task := &taskpb.Task{
+		Id:       res.ID.Hex(),
+		Title:    res.Title,
+		Desc:     res.Desc,
+		Reminder: remainder,
+	}
+	return &taskpb.ReadResponse{Task: task}, nil
 }
 
 // Update todo task
 func (s *taskService) Update(ctx context.Context, req *taskpb.UpdateRequest) (*taskpb.UpdateResponse, error) {
-	return new(taskpb.UpdateResponse), http.ErrHandlerTimeout
+	task := req.GetTask()
+
+	remainder, err := ptypes.Timestamp(task.Reminder)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "reminder has unknown field"+err.Error())
+	}
+
+	objID, err := primitive.ObjectIDFromHex(task.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%s"+err.Error())
+	}
+
+	updateTask := Task{
+		ID:       objID,
+		Title:    task.GetTitle(),
+		Desc:     task.GetDesc(),
+		Reminder: remainder,
+	}
+
+	res := &Task{}
+	err = s.coll.FindOneAndReplace(ctx, bson.D{{Key: "_id", Value: updateTask.ID}}, bson.D{{Key: "$set", Value: updateTask}}).Decode(&res)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to update todo task "+err.Error())
+	}
+
+	return &taskpb.UpdateResponse{Id: res.ID.Hex()}, nil
 }
 
 // Delete todo task
