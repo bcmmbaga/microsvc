@@ -38,7 +38,7 @@ message DeleteRequest { string id = 1; }
 
 message DeleteResponse { string id = 1; }
 
-message ReadAllResponse { repeated Task task = 1; }
+message ReadAllResponse { repeated Task tasks = 1; }
 
 service TaskService {
   // Create creates new todo task

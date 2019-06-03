@@ -3,7 +3,6 @@ package taskservice
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -163,5 +162,36 @@ func (s *taskService) Delete(ctx context.Context, req *taskpb.DeleteRequest) (*t
 
 // Read all todo tasks
 func (s *taskService) ReadAll(ctx context.Context, req *empty.Empty) (*taskpb.ReadAllResponse, error) {
-	return new(taskpb.ReadAllResponse), http.ErrHandlerTimeout
+	results := make([]*Task, 0)
+
+	cur, err := s.coll.Find(ctx, nil)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%s"+err.Error())
+	}
+	defer cur.Close(ctx)
+
+	res := new(Task)
+	for cur.Next(ctx) {
+		err = cur.Decode(&res)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "%s"+err.Error())
+		}
+		results = append(results, res)
+	}
+	if err := cur.Err(); err != nil {
+		return nil, status.Errorf(codes.Internal, "%s"+err.Error())
+	}
+
+	var tasks []*taskpb.Task
+	for _, task := range results {
+		remainder, _ := ptypes.TimestampProto(task.Reminder)
+		tasks = append(tasks, &taskpb.Task{
+			Id:       task.ID.Hex(),
+			Title:    task.Title,
+			Desc:     task.Desc,
+			Reminder: remainder,
+		})
+	}
+
+	return &taskpb.ReadAllResponse{Tasks: tasks}, nil
 }
