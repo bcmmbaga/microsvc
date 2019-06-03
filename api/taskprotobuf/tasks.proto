@@ -34,7 +34,7 @@ message UpdateRequest { Task task = 1; }
 
 message UpdateResponse { string id = 1; }
 
-message DeleteRequest { int64 id = 1; }
+message DeleteRequest { string id = 1; }
 
 message DeleteResponse { string id = 1; }
 
