@@ -35,14 +35,14 @@ type Task struct {
 }
 
 // NewTaskService create a new service for task management
-func NewTaskService(ctx context.Context, hosts ...string) taskpb.TaskServiceServer {
+func NewTaskService(ctx context.Context, db, coll string, hosts ...string) taskpb.TaskServiceServer {
 	applyURI := dbHost(27017, hosts...)
 	c, err := mongo.Connect(ctx, options.Client().ApplyURI(applyURI))
 	if err != nil {
 		return nil
 	}
 
-	return &taskService{coll: c.Database("todosdb").Collection("todos")}
+	return &taskService{coll: c.Database(db).Collection(coll)}
 }
 
 // dbHost joins multiple host names into single address for connection
