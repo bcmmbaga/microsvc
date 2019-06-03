@@ -136,7 +136,7 @@ func (s *taskService) Update(ctx context.Context, req *taskpb.UpdateRequest) (*t
 		Reminder: remainder,
 	}
 
-	res := &Task{}
+	res := new(Task)
 	err = s.coll.FindOneAndReplace(ctx, bson.D{{Key: "_id", Value: updateTask.ID}}, bson.D{{Key: "$set", Value: updateTask}}).Decode(&res)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to update todo task "+err.Error())
@@ -147,7 +147,18 @@ func (s *taskService) Update(ctx context.Context, req *taskpb.UpdateRequest) (*t
 
 // Delete todo task
 func (s *taskService) Delete(ctx context.Context, req *taskpb.DeleteRequest) (*taskpb.DeleteResponse, error) {
-	return new(taskpb.DeleteResponse), http.ErrHandlerTimeout
+	objID, err := primitive.ObjectIDFromHex(req.GetId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%s"+err.Error())
+	}
+
+	res := new(Task)
+	err = s.coll.FindOneAndDelete(ctx, bson.D{{Key: "_id", Value: objID}}).Decode(&res)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%s"+err.Error())
+	}
+
+	return &taskpb.DeleteResponse{Id: res.ID.Hex()}, nil
 }
 
 // Read all todo tasks
