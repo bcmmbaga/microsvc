@@ -35,8 +35,7 @@ type Task struct {
 }
 
 // NewTaskService create a new service for task management
-func NewTaskService(ctx context.Context, db, coll string, hosts ...string) taskpb.TaskServiceServer {
-	applyURI := dbHost(27017, hosts...)
+func NewTaskService(ctx context.Context, applyURI, db, coll string) taskpb.TaskServiceServer {
 	c, err := mongo.Connect(ctx, options.Client().ApplyURI(applyURI))
 	if err != nil {
 		return nil

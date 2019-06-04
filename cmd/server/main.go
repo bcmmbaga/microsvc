@@ -16,8 +16,10 @@ import (
 )
 
 var (
-	ctx = context.Background()
-	srv = taskservice.NewTaskService(ctx, "todosdb", "todos", "mongo-0.mongo", "mongo-1.mongo")
+	ctx      = context.Background()
+	dbConn   = "mongodb://localhost:27017"
+	dbName   = "todosdb"
+	collName = "todos"
 )
 
 func main() {
@@ -28,8 +30,9 @@ func main() {
 }
 
 func runServer() error {
+	srv := taskservice.NewTaskService(ctx, dbConn, dbName, collName)
 	if srv == nil {
-		return errors.New("Failed to initialize new Task service")
+		return errors.New("Failed to initialize new task service")
 	}
 
 	lis, err := net.Listen("tcp", "localhost:3000")
