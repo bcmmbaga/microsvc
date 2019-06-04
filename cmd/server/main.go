@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"os"
@@ -27,6 +28,9 @@ func main() {
 }
 
 func runServer() error {
+	if srv == nil {
+		return errors.New("Failed to initialize new Task service")
+	}
 
 	lis, err := net.Listen("tcp", "localhost:3000")
 	if err != nil {
